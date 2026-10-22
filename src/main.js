@@ -52,7 +52,7 @@ function renderFinalResult() {
 }
 function resetRound() {
   match.reset(); objectives=null; scoring=null; finalResult=null;
-  events.reset(); crowd.setEvent(null); renderEvent(null);
+  events.reset(); crowd.reset(); renderEvent(null);
   player.position.set(SPAWN.x,0,SPAWN.z);
   visited.clear(); refreshHud(SPAWN.x,SPAWN.z);
   renderFinalResult();
