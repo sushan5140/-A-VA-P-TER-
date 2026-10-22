@@ -17,3 +17,5 @@ body{margin:0;overflow:hidden}#app,#game{width:100vw;height:100dvh;min-height:32
 .round-bar strong{font:700 21px 'Space Grotesk',sans-serif;color:#f9e8c9}
 .ui-button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:650px){.round-bar{top:62px;left:10px;gap:7px;font-size:10px}.round-bar strong{font-size:15px}.match-panel{padding:19px}}
+
+.mission-card{position:absolute;top:147px;left:18px;z-index:4;width:min(270px,calc(100vw - 36px));background:#17233aee;color:#fff;border:1px solid #f9e8c955;border-radius:13px;padding:13px;box-shadow:0 8px 24px #17233a44}.mission-card[hidden]{display:none}.mission-card strong{font:700 14px 'Space Grotesk',sans-serif;color:#f9e8c9}.mission-card p{font-size:12px;line-height:1.4;margin:9px 0}.mission-done{color:#a9e3bc}.mission-card #mission-progress{border-top:1px solid #ffffff28;padding-top:8px;font-weight:700}@media(max-width:650px){.mission-card{top:118px;left:10px;width:min(205px,calc(100vw - 20px));padding:9px}.mission-card p{font-size:10px}}
