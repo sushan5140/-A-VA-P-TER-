@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import './style.css';
 import { createWorld, SPAWN } from './world/paris.js';
+import { createPlayer } from './character/player.js';
 
 const mount = document.querySelector('#game');
 const positionText = document.querySelector('#coords');
@@ -30,20 +31,15 @@ scene.add(sun);
 
 const world = createWorld(scene);
 
-const player = new THREE.Group();
-const coat = new THREE.Mesh(new THREE.CapsuleGeometry(.43, .9, 5, 8), new THREE.MeshStandardMaterial({ color: '#3764c9', roughness: .75 }));
-coat.position.y = 1;
-coat.castShadow = true;
-player.add(coat);
-const head = new THREE.Mesh(new THREE.SphereGeometry(.43, 12, 8), new THREE.MeshStandardMaterial({ color: '#f0c59c', roughness: .85 }));
-head.position.y = 1.91;
-head.castShadow = true;
-player.add(head);
-const hair = new THREE.Mesh(new THREE.SphereGeometry(.44, 10, 6, 0, Math.PI * 2, 0, Math.PI * .5), new THREE.MeshStandardMaterial({ color: '#382d31' }));
-hair.position.y = 2.09;
-player.add(hair);
+const character = createPlayer();
+const player = character.root;
 player.position.set(SPAWN.x, 0, SPAWN.z);
 scene.add(player);
+
+// Camera damping and angle are tuned for a legible indie-game overview.
+const cameraFocus = new THREE.Vector3(SPAWN.x, 0, SPAWN.z);
+const cameraOffset = new THREE.Vector3(12, 20, 16);
+const cameraLook = new THREE.Vector3();
 
 const keys = new Set();
 window.addEventListener('keydown', e => {
@@ -71,6 +67,7 @@ resize();
 
 const clock = new THREE.Clock();
 let last = 0;
+let lastX = player.position.x, lastZ = player.position.z;
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), .05);
@@ -85,11 +82,17 @@ function animate() {
     dz = dz / length * dt * 6;
     if (!blocked(player.position.x + dx, player.position.z)) player.position.x += dx;
     if (!blocked(player.position.x, player.position.z + dz)) player.position.z += dz;
-    player.rotation.y = Math.atan2(dx, dz);
+    // Smooth character facing is applied to the visual rig.
   }
-  const target = new THREE.Vector3(player.position.x + 14, 19, player.position.z + 17);
-  camera.position.lerp(target, Math.min(1, dt * 4));
-  camera.lookAt(player.position.x, 0, player.position.z);
+  const moved = Math.hypot(player.position.x - lastX, player.position.z - lastZ) > .0001;
+  const heading = moved ? Math.atan2(player.position.x - lastX, player.position.z - lastZ) : 0;
+  character.update(dt, moved, heading);
+  lastX = player.position.x;
+  lastZ = player.position.z;
+  cameraFocus.lerp(player.position, 1 - Math.exp(-dt * 6));
+  camera.position.copy(cameraFocus).add(cameraOffset);
+  cameraLook.set(cameraFocus.x, .8, cameraFocus.z);
+  camera.lookAt(cameraLook);
   if (clock.elapsedTime - last > .2) {
     positionText.textContent = 'Position: ' + player.position.x.toFixed(1) + ', ' + player.position.z.toFixed(1);
     last = clock.elapsedTime;
