@@ -6,6 +6,7 @@ import { createMatch } from './game/match.js';
 import { createObjectives } from './game/objectives.js';
 import { createCrowd } from './world/crowdVisual.js';
 import { createEventDirector } from './game/events.js';
+import { createScoring } from './game/scoring.js';
 import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
 const mount = document.querySelector('#game');
@@ -30,6 +31,10 @@ closeHelp.addEventListener('click', () => setHelp(false));
 window.addEventListener('keydown', event => { if (event.key === 'Escape' && !help.hidden) setHelp(false); });
 const match = createMatch();
 let objectives = null;
+let scoring = null;
+const scoreText = document.querySelector('#score-total');
+const scoreDetails = document.querySelector('#score-details');
+function renderScore() { const st=scoring?.snapshot(); scoreText.textContent = st ? String(st.total) : '0'; scoreDetails.textContent=st ? `Missions ${st.missions} · Access ${st.access} · Events ${st.events}` : 'Earn points by completing missions and maintaining safe access'; }
 const missionCard = document.querySelector('#mission-card');
 const missionList = document.querySelector('#mission-list');
 const missionProgress = document.querySelector('#mission-progress');
@@ -58,16 +63,17 @@ function displayMatch() {
   primary.hidden = phase === 'results';
   primary.textContent = phase === 'paused' ? 'Resume' : 'Start round';
   renderMissions();
+  renderScore();
   message.textContent = phase === 'menu' ? 'Choose a role for a three-minute exploration round.' :
     phase === 'ready' ? 'Visit the three mission locations marked on the map.' :
-    phase === 'paused' ? 'Round paused.' : phase === 'results' ? 'Round complete. Missions are tracked, but score and winners arrive later.' : '';
+    phase === 'paused' ? 'Round paused.' : phase === 'results' ? 'Round complete. Your score is shown below; winner comparison comes in L2.P6.' : '';
   roleText.textContent = role === 'student' ? 'Student Organizer' : role === 'safety' ? 'Civic Safety Officer' : 'No role selected';
   timerText.textContent = String(Math.floor(remaining / 60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
   pauseButton.disabled = phase !== 'playing';
 }
-roles.querySelectorAll('[data-role]').forEach(button => button.addEventListener('click', () => { if(match.select(button.dataset.role)) objectives=createObjectives(button.dataset.role); displayMatch(); }));
+roles.querySelectorAll('[data-role]').forEach(button => button.addEventListener('click', () => { if(match.select(button.dataset.role)) { objectives=createObjectives(button.dataset.role); scoring=createScoring(button.dataset.role); } displayMatch(); }));
 primary.addEventListener('click', () => { if (match.snapshot().phase === 'paused') match.resume(); else match.start(); displayMatch(); });
-resetButton.addEventListener('click', () => { match.reset(); objectives=null; events.reset(); crowd.setEvent(null); renderEvent(null); displayMatch(); });
+resetButton.addEventListener('click', () => { match.reset(); objectives=null; scoring=null; events.reset(); crowd.setEvent(null); renderEvent(null); displayMatch(); });
 pauseButton.addEventListener('click', () => { match.pause(); displayMatch(); });
 displayMatch();
 const scene = new THREE.Scene();
@@ -123,7 +129,7 @@ function refreshHud(x,z) {
     const d = Math.hypot(x-zone.x,z-zone.z);
     return !best || d < best.distance ? { zone, distance:d } : best;
   },null);
-  if (closest.distance < 2.5) { visited.add(closest.zone.id); if(match.snapshot().phase==='playing' && objectives) { objectives.visit(closest.zone.id); renderMissions(); } }
+  if (closest.distance < 2.5) { visited.add(closest.zone.id); if(match.snapshot().phase==='playing' && objectives) { objectives.visit(closest.zone.id); if(scoring) scoring.mission(closest.zone.id); renderMissions(); renderScore(); } }
   zoneName.textContent = closest.zone.name;
   zoneDistance.textContent = closest.distance < 2.5 ? 'Area discovered!' : `${closest.distance.toFixed(1)} units away · Follow the colored ring`;
   progressText.textContent = `${visited.size} / ${world.zones.length} areas visited`;
@@ -191,6 +197,14 @@ function animate() {
     const outcome=events.update(dt);
     if(outcome.changed){crowd.setEvent(outcome.event);renderEvent(outcome.event);}
     crowd.update(dt);
+    if(scoring) {
+      const px=player.position.x,pz=player.position.z;
+      const accessZones = match.snapshot().role === 'student' ? ['plaza','west-route'] : ['services','east-route'];
+      const accessible = world.zones.some(z=>accessZones.includes(z.id)&&Math.hypot(px-z.x,pz-z.z)<3);
+      scoring.access(dt,accessible);
+      if (events.snapshot() && accessible) scoring.respond(events.snapshot().type,'acknowledge');
+      renderScore();
+    }
   }
   if (match.snapshot().phase === 'results' && panel.hidden) displayMatch();
   if (match.snapshot().phase === 'playing') timerText.textContent = String(Math.floor(match.snapshot().remaining / 60)).padStart(2,'0')+':'+String(match.snapshot().remaining%60).padStart(2,'0');
