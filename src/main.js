@@ -6,6 +6,23 @@ import { createPlayer } from './character/player.js';
 const mount = document.querySelector('#game');
 const positionText = document.querySelector('#coords');
 const errorText = document.querySelector('#error');
+const zoneName = document.querySelector('#zone-name');
+const zoneDistance = document.querySelector('#zone-distance');
+const progressText = document.querySelector('#progress-text');
+const progressBar = document.querySelector('#progress-bar');
+const mapPlayer = document.querySelector('#map-player');
+const mapDots = document.querySelector('#map-dots');
+const help = document.querySelector('#help-panel');
+const toggleHelp = document.querySelector('#help-toggle');
+const closeHelp = document.querySelector('#help-close');
+function setHelp(open) {
+  help.hidden = !open;
+  toggleHelp.setAttribute('aria-expanded', String(open));
+  if (open) closeHelp.focus(); else toggleHelp.focus();
+}
+toggleHelp.addEventListener('click', () => setHelp(help.hidden));
+closeHelp.addEventListener('click', () => setHelp(false));
+window.addEventListener('keydown', event => { if (event.key === 'Escape' && !help.hidden) setHelp(false); });
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#dbe7ed');
 scene.fog = new THREE.Fog('#dbe7ed', 40, 100);
@@ -30,6 +47,33 @@ sun.shadow.camera.bottom = -28;
 scene.add(sun);
 
 const world = createWorld(scene);
+const visited = new Set();
+const mapPos = n => `${((n + 32) / 64 * 100).toFixed(2)}%`;
+for (const zone of world.zones) {
+  const dot = document.createElement('div');
+  dot.className = 'map-dot';
+  dot.style.left = mapPos(zone.x);
+  dot.style.top = mapPos(zone.z);
+  dot.style.backgroundColor = zone.color;
+  dot.title = zone.name;
+  dot.dataset.zone = zone.id;
+  mapDots.appendChild(dot);
+}
+function refreshHud(x,z) {
+  const closest = world.zones.reduce((best, zone) => {
+    const d = Math.hypot(x-zone.x,z-zone.z);
+    return !best || d < best.distance ? { zone, distance:d } : best;
+  },null);
+  if (closest.distance < 2.5) visited.add(closest.zone.id);
+  zoneName.textContent = closest.zone.name;
+  zoneDistance.textContent = closest.distance < 2.5 ? 'Area discovered!' : `${closest.distance.toFixed(1)} units away · Follow the colored ring`;
+  progressText.textContent = `${visited.size} / ${world.zones.length} areas visited`;
+  progressBar.style.width = `${visited.size / world.zones.length * 100}%`;
+  mapPlayer.style.left = mapPos(x);
+  mapPlayer.style.top = mapPos(z);
+  for (const dot of mapDots.children) dot.classList.toggle('visited',visited.has(dot.dataset.zone));
+}
+refreshHud(SPAWN.x,SPAWN.z);
 
 const character = createPlayer();
 const player = character.root;
@@ -95,6 +139,7 @@ function animate() {
   camera.lookAt(cameraLook);
   if (clock.elapsedTime - last > .2) {
     positionText.textContent = 'Position: ' + player.position.x.toFixed(1) + ', ' + player.position.z.toFixed(1);
+    refreshHud(player.position.x,player.position.z);
     last = clock.elapsedTime;
   }
   renderer.render(scene, camera);
