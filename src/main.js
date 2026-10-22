@@ -3,6 +3,7 @@ import './style.css';
 import { createWorld, SPAWN } from './world/paris.js';
 import { createPlayer } from './character/player.js';
 import { createMatch } from './game/match.js';
+import { createObjectives } from './game/objectives.js';
 import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
 const mount = document.querySelector('#game');
@@ -26,6 +27,18 @@ toggleHelp.addEventListener('click', () => setHelp(help.hidden));
 closeHelp.addEventListener('click', () => setHelp(false));
 window.addEventListener('keydown', event => { if (event.key === 'Escape' && !help.hidden) setHelp(false); });
 const match = createMatch();
+let objectives = null;
+const missionCard = document.querySelector('#mission-card');
+const missionList = document.querySelector('#mission-list');
+const missionProgress = document.querySelector('#mission-progress');
+function renderMissions() {
+  const state=objectives?.snapshot();
+  missionCard.hidden=!state;
+  if(!state)return;
+  missionList.replaceChildren(...state.tasks.map(task=>{const item=document.createElement('p');item.textContent=(task.done?'✓ ':'○ ')+task.label;item.className=task.done?'mission-done':'';return item;}));
+  missionProgress.textContent=state.completed+' / '+state.total+' completed';
+}
+
 const panel = document.querySelector('#match-panel');
 const message = document.querySelector('#match-message');
 const roles = document.querySelector('#role-buttons');
@@ -42,16 +55,17 @@ function displayMatch() {
   controls.hidden = phase === 'menu';
   primary.hidden = phase === 'results';
   primary.textContent = phase === 'paused' ? 'Resume' : 'Start round';
+  renderMissions();
   message.textContent = phase === 'menu' ? 'Choose a role for a three-minute exploration round.' :
-    phase === 'ready' ? 'Ready to explore! Gameplay objectives arrive in L2.P2.' :
-    phase === 'paused' ? 'Round paused.' : phase === 'results' ? 'Round finished. This prototype has no win scoring yet.' : '';
+    phase === 'ready' ? 'Visit the three mission locations marked on the map.' :
+    phase === 'paused' ? 'Round paused.' : phase === 'results' ? 'Round complete. Missions are tracked, but score and winners arrive later.' : '';
   roleText.textContent = role === 'student' ? 'Student Organizer' : role === 'safety' ? 'Civic Safety Officer' : 'No role selected';
   timerText.textContent = String(Math.floor(remaining / 60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
   pauseButton.disabled = phase !== 'playing';
 }
-roles.querySelectorAll('[data-role]').forEach(button => button.addEventListener('click', () => { match.select(button.dataset.role); displayMatch(); }));
+roles.querySelectorAll('[data-role]').forEach(button => button.addEventListener('click', () => { if(match.select(button.dataset.role)) objectives=createObjectives(button.dataset.role); displayMatch(); }));
 primary.addEventListener('click', () => { if (match.snapshot().phase === 'paused') match.resume(); else match.start(); displayMatch(); });
-resetButton.addEventListener('click', () => { match.reset(); displayMatch(); });
+resetButton.addEventListener('click', () => { match.reset(); objectives=null; displayMatch(); });
 pauseButton.addEventListener('click', () => { match.pause(); displayMatch(); });
 displayMatch();
 const scene = new THREE.Scene();
@@ -96,7 +110,7 @@ function refreshHud(x,z) {
     const d = Math.hypot(x-zone.x,z-zone.z);
     return !best || d < best.distance ? { zone, distance:d } : best;
   },null);
-  if (closest.distance < 2.5) visited.add(closest.zone.id);
+  if (closest.distance < 2.5) { visited.add(closest.zone.id); if(match.snapshot().phase==='playing' && objectives) { objectives.visit(closest.zone.id); renderMissions(); } }
   zoneName.textContent = closest.zone.name;
   zoneDistance.textContent = closest.distance < 2.5 ? 'Area discovered!' : `${closest.distance.toFixed(1)} units away · Follow the colored ring`;
   progressText.textContent = `${visited.size} / ${world.zones.length} areas visited`;
