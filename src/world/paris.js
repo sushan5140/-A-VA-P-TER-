@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { addParisDressing } from './dressing.js';
 
 // Original fictional Paris-inspired blockout. No real protest routes or live geodata.
 export const ZONES = Object.freeze([
@@ -58,6 +59,7 @@ export function createWorld(scene) {
       block(.65,.85,.07,'#607f9b',x+i*1.4,h*.63,z+d/2+.045);
     }
   }
+  addParisDressing(scene, buildings);
   // Non-blocking markers deliberately indicate fictional gameplay zones.
   for(const zone of ZONES){
     const ring=new THREE.Mesh(new THREE.TorusGeometry(1.9,.11,6,30),mat(zone.color));
