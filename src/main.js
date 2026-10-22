@@ -127,9 +127,10 @@ function applyQuality(mode) {
 document.querySelector('#graphics-toggle').addEventListener('click', () => applyQuality(qualityMode === 'low' ? 'auto' : 'low'));
 function animate() {
   requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), .05);
+  const elapsed = clock.getDelta();
+  const dt = Math.min(elapsed, .05);
   frameSamples++;
-  sampleSeconds += dt;
+  sampleSeconds += elapsed;
   if (sampleSeconds >= 1.0) {
     const fps = sampleFps(frameSamples, sampleSeconds);
     document.querySelector('#fps').textContent = fps + ' FPS';
