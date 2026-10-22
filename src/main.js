@@ -3,6 +3,7 @@ import './style.css';
 import { createWorld, SPAWN } from './world/paris.js';
 import { createPlayer } from './character/player.js';
 import { createMatch } from './game/match.js';
+import { createTouchMovement } from './input/touch.js';
 import { createObjectives } from './game/objectives.js';
 import { createCrowd } from './world/crowdVisual.js';
 import { createEventDirector } from './game/events.js';
@@ -54,7 +55,7 @@ function resetRound() {
   match.reset(); objectives=null; scoring=null; finalResult=null;
   events.reset(); crowd.reset(); renderEvent(null);
   player.position.set(SPAWN.x,0,SPAWN.z);
-  keys.clear(); lastX=SPAWN.x; lastZ=SPAWN.z;
+  keys.clear(); touch.clear(); lastX=SPAWN.x; lastZ=SPAWN.z;
   visited.clear(); refreshHud(SPAWN.x,SPAWN.z);
   renderFinalResult();
   displayMatch();
@@ -185,6 +186,7 @@ const cameraOffset = new THREE.Vector3(12, 20, 16);
 const cameraLook = new THREE.Vector3();
 
 const keys = new Set();
+const touch = createTouchMovement(document.querySelector('#touch-pad'));
 window.addEventListener('keydown', e => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
   keys.add(e.key.toLowerCase());
@@ -261,6 +263,9 @@ function animate() {
   if (keys.has('s') || keys.has('arrowdown')) dz += 1;
   if (keys.has('a') || keys.has('arrowleft')) dx -= 1;
   if (keys.has('d') || keys.has('arrowright')) dx += 1;
+  const touchAxes = touch.getAxes();
+  dx += touchAxes.x;
+  dz += touchAxes.z;
   const length = Math.hypot(dx, dz);
   if (length && match.snapshot().phase === 'playing') {
     dx = dx / length * dt * 6;
