@@ -28,3 +28,12 @@ body{margin:0;overflow:hidden}#app,#game{width:100vw;height:100dvh;min-height:32
 .result-summary[hidden]{display:none}
 .result-summary strong{font:700 27px 'Space Grotesk',sans-serif;color:#f5c77d}
 .result-summary p{margin:7px 0;font-size:12px;line-height:1.5;color:#f9e8c9}
+
+/* Mobile touch controls: shown on coarse-pointer devices. The player must
+   choose a role and press Start before movement is enabled. */
+.touch-pad{display:none;position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(76px,env(safe-area-inset-bottom));z-index:9;width:168px;height:168px;grid-template-areas:". up ." "left down right";grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:7px;touch-action:none;user-select:none;-webkit-user-select:none}
+.touch-pad button{border:2px solid #f9e8c9aa;border-radius:14px;background:#17233ae8;color:#fff;font:700 22px Inter,system-ui,sans-serif;touch-action:none;min-height:54px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.touch-pad button:active{background:#3764c9}.touch-pad button:focus-visible{outline:3px solid #f5c77d;outline-offset:2px}
+.touch-pad [data-direction="up"]{grid-area:up}.touch-pad [data-direction="left"]{grid-area:left}.touch-pad [data-direction="down"]{grid-area:down}.touch-pad [data-direction="right"]{grid-area:right}
+@media(pointer:coarse){.touch-pad{display:grid}.event-card{bottom:255px;right:10px}.hud{bottom:12px;max-width:calc(100% - 196px)}.score-card{bottom:160px}}
+@media(pointer:coarse) and (max-width:480px){.touch-pad{right:8px;bottom:12px;width:144px;height:144px;gap:5px}.touch-pad button{min-height:48px}.hud{max-width:calc(100% - 166px)}.event-card{bottom:170px}.score-card{bottom:185px}}
