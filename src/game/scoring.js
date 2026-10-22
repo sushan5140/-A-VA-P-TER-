@@ -1,11 +1,12 @@
 // Role-specific, deterministic scoring; only recorded, demonstrated actions
 // earn points. No injury, arrests, suppression or fictional outcomes score.
+import { ROLE_MISSIONS } from './objectives.js';
 export const SCORE_WEIGHTS=Object.freeze({mission:20, safeAccess:10, eventResponse:10});
 export function createScoring(role){
  if(!['student','safety'].includes(role))throw new Error('Invalid scoring role');
  const completed=new Set(),responded=new Set();let accessSeconds=0;
  return {
-  mission(zone){completed.add(zone);},
+  mission(zone){if(ROLE_MISSIONS[role].some(task=>task.id===zone)) completed.add(zone);},
   access(dt,active){if(active&&Number.isFinite(dt)&&dt>0)accessSeconds+=Math.min(dt,1);},
   respond(eventId,action){if(eventId&&action==='acknowledge')responded.add(eventId);},
   reset(){completed.clear();responded.clear();accessSeconds=0;},
