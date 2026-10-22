@@ -1,32 +1,20 @@
-# ÇA VA PÉTER! — Development Plan
+# Development Plan
 
-## Phase 0: repository foundation
-- [x] Confirm repository and permissions.
-- [x] Confirm initial repository was empty.
-- [x] Initialize README on main.
-- [x] Draft design and development documentation on separate branch.
-- [ ] Merge Phase 0 PR after review.
+The authoritative implementation breakdown is [**Level / Phase Master Roadmap**](LEVEL_PHASE_ROADMAP.md), using the hierarchy **Level → Phase → Task/Test**. The earlier milestone labels M0–M4 in the Word PRD are mapped to levels in this roadmap and do not represent separate parallel plans.
 
-## Phase 1: visual foundation
-**Deliverable:** basic walkable stylized Paris block. Create renderer, ground, streets, buildings, camera and two placeholder player models. Include controls and a browser smoke test. **Not complete** until the scene loads consistently and player navigation works.
+## Current state
+- L0.P1 Repository audit — Verified.
+- L0.P2 Product baseline — Documented.
+- L0.P3–L0.P4 visual tokens and architecture — Planned for review.
+- L0.P5 Merge and approve documents — Pending.
+- L1–L5 — Not started. No game code, deployment or online service exists yet.
 
-## Phase 2: core mechanics
-**Deliverable:** one distinct objective for each role, safe zones, checkpoints, a simple crowd simulator and scenario events. Keep simulation deterministic and testable.
+## Workflow
+1. Complete one phase at a time on a feature branch.
+2. Require demonstrable acceptance checks per phase.
+3. Open PR with tests/screenshots and unresolved issues.
+4. Merge only after review; do not mark the next level started early.
+5. Keep costs at ₹0 where feasible; validate limits before adding realtime dependencies.
 
-## Phase 3: offline vertical slice
-**Deliverable:** full three-minute round: select role → play → scoring → result → restart. Include pause, audio controls, input help and automated game-state tests.
-
-## Phase 4: multiplayer
-**Deliverable:** verified private-room workflow with synchronized positions and authoritative match resolution. Include disconnect/reconnect tests, basic anti-cheat validation and sensible free-tier usage constraints. Avoid shipping if core offline loop is not fun and stable.
-
-## Phase 5: polish and shipping
-Performance profiling, asset optimization, responsive UI, accessibility, sound, mobile control refinement and release audit.
-
-## Proposed architecture (not implemented)
-- Browser client: JavaScript/TypeScript with Three.js and Vite.
-- Game modules: world, input, character, NPC behavior, objectives, match state, UI/audio.
-- Static deployment first, then optional realtime backend.
-- Asset manifest and explicit attribution/licenses.
-
-## Definition of done per phase
-A working build, reproducible tests, documented limitations, no leaked credentials, and reviewable changes. Avoid merging a beautiful but noninteractive placeholder as if it were gameplay.
+## First playable target
+A fictional miniature Paris map with a top-down tilted camera, role choice, NPC crowd flows, three environmental events and a 180-second offline match. Students and Civic Safety Officers have different safety-focused objectives. See [Product Brief](PRODUCT_BRIEF.md).
