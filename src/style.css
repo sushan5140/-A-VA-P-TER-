@@ -7,3 +7,13 @@ body{margin:0;overflow:hidden}#app,#game{width:100vw;height:100dvh;min-height:32
 .help-panel{top:70px;right:18px;width:min(315px,calc(100vw - 36px));padding:18px;z-index:10}.help-panel[hidden]{display:none}.help-panel strong{font:700 18px 'Space Grotesk',sans-serif}.help-panel p{font-size:12px;line-height:1.6}kbd{background:#ffffff20;border:1px solid #ffffff5a;border-radius:5px;padding:2px 4px;margin:0 2px}footer{position:absolute;bottom:9px;right:16px;font-size:10px;color:#17233a;text-shadow:0 1px 1px #fff}#error{position:absolute;inset:30% 10% auto;padding:18px;border-radius:12px;background:#8a2333;color:#fff;text-align:center}
 @media(max-width:650px){.topbar{padding:11px;gap:8px}.build{display:none}.map-card{right:10px;top:64px;width:135px;padding:9px}.card-heading{font-size:8px}.hud{left:10px;bottom:12px;padding:11px 13px;width:min(260px,calc(100vw - 20px))}.hud strong{font-size:16px}.hud p{font-size:11px}.help-panel{top:62px;right:10px}footer{display:none}}
 @media(prefers-reduced-motion:reduce){.explore-progress div{transition:none}}
+
+.match-panel{position:absolute;z-index:12;inset:50% auto auto 50%;transform:translate(-50%,-50%);width:min(430px,calc(100vw - 30px));padding:28px;background:#17233af5;border:1px solid #f9e8c977;border-radius:20px;text-align:center;box-shadow:0 20px 80px #09142288;color:#fff}
+.match-panel h1{font:700 clamp(26px,6vw,40px) 'Space Grotesk',sans-serif;margin:0;color:#f9e8c9}
+.match-panel p{line-height:1.55;font-size:13px;color:#e2e9f0}
+#role-buttons,#match-controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:15px}
+.match-panel [hidden],#role-buttons[hidden],#match-controls[hidden],.round-bar [hidden]{display:none!important}
+.round-bar{position:absolute;top:72px;left:18px;background:#17233aee;border:1px solid #f9e8c955;border-radius:13px;padding:8px 12px;display:flex;gap:12px;align-items:center;font-size:12px}
+.round-bar strong{font:700 21px 'Space Grotesk',sans-serif;color:#f9e8c9}
+.ui-button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:650px){.round-bar{top:62px;left:10px;gap:7px;font-size:10px}.round-bar strong{font-size:15px}.match-panel{padding:19px}}
