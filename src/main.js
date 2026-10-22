@@ -4,6 +4,7 @@ import { createWorld, SPAWN } from './world/paris.js';
 import { createPlayer } from './character/player.js';
 import { createMatch } from './game/match.js';
 import { createObjectives } from './game/objectives.js';
+import { createCrowd } from './world/crowdVisual.js';
 import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
 const mount = document.querySelector('#game');
@@ -93,6 +94,7 @@ sun.shadow.camera.bottom = -28;
 scene.add(sun);
 
 const world = createWorld(scene);
+const crowd = createCrowd(scene,world.waypoints,48);
 const visited = new Set();
 const mapPos = n => `${((n + 32) / 64 * 100).toFixed(2)}%`;
 for (const zone of world.zones) {
@@ -174,6 +176,7 @@ function animate() {
   const elapsed = clock.getDelta();
   const dt = Math.min(elapsed, .05);
   match.tick(dt);
+  if (match.snapshot().phase === 'playing') crowd.update(dt);
   if (match.snapshot().phase === 'results' && panel.hidden) displayMatch();
   if (match.snapshot().phase === 'playing') timerText.textContent = String(Math.floor(match.snapshot().remaining / 60)).padStart(2,'0')+':'+String(match.snapshot().remaining%60).padStart(2,'0');
   frameSamples++;
