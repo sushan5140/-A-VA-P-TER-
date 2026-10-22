@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import './style.css';
 import { createWorld, SPAWN } from './world/paris.js';
 import { createPlayer } from './character/player.js';
+import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
 const mount = document.querySelector('#game');
 const positionText = document.querySelector('#coords');
@@ -28,9 +29,10 @@ scene.background = new THREE.Color('#dbe7ed');
 scene.fog = new THREE.Fog('#dbe7ed', 40, 100);
 
 const camera = new THREE.OrthographicCamera(-14, 14, 8, -8, 0.1, 180);
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'default' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-renderer.shadowMap.enabled = true;
+let qualityMode = new URLSearchParams(location.search).get('quality') === 'low' ? 'low' : 'auto';
+const renderer = new THREE.WebGLRenderer({ antialias: qualityMode !== 'low', powerPreference: 'default' });
+renderer.setPixelRatio(qualitySettings(qualityMode,window.devicePixelRatio).pixelRatio);
+renderer.shadowMap.enabled = qualitySettings(qualityMode,window.devicePixelRatio).shadows;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 mount.appendChild(renderer.domElement);
@@ -112,9 +114,31 @@ resize();
 const clock = new THREE.Clock();
 let last = 0;
 let lastX = player.position.x, lastZ = player.position.z;
+let frameSamples = 0, sampleSeconds = 0, underTargetSamples = 0;
+const perf = document.querySelector('#performance-status');
+function applyQuality(mode) {
+  qualityMode = mode;
+  const settings = qualitySettings(mode, window.devicePixelRatio);
+  renderer.shadowMap.enabled = settings.shadows;
+  renderer.setPixelRatio(settings.pixelRatio);
+  renderer.setSize(mount.clientWidth || innerWidth, mount.clientHeight || innerHeight, false);
+  perf.textContent = mode === 'low' ? 'LOW GRAPHICS' : 'AUTO GRAPHICS';
+}
+document.querySelector('#graphics-toggle').addEventListener('click', () => applyQuality(qualityMode === 'low' ? 'auto' : 'low'));
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), .05);
+  frameSamples++;
+  sampleSeconds += dt;
+  if (sampleSeconds >= 1.0) {
+    const fps = sampleFps(frameSamples, sampleSeconds);
+    document.querySelector('#fps').textContent = fps + ' FPS';
+    underTargetSamples = fps < 28 ? underTargetSamples + 1 : 0;
+    const recommended = recommendQuality(fps, qualityMode, underTargetSamples);
+    if (recommended !== qualityMode) applyQuality(recommended);
+    frameSamples = 0;
+    sampleSeconds = 0;
+  }
   let dx = 0, dz = 0;
   if (keys.has('w') || keys.has('arrowup')) dz -= 1;
   if (keys.has('s') || keys.has('arrowdown')) dz += 1;
