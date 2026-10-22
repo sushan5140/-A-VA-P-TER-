@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import './style.css';
 import { createWorld, SPAWN } from './world/paris.js';
 import { createPlayer } from './character/player.js';
+import { createMatch } from './game/match.js';
 import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
 const mount = document.querySelector('#game');
@@ -24,6 +25,35 @@ function setHelp(open) {
 toggleHelp.addEventListener('click', () => setHelp(help.hidden));
 closeHelp.addEventListener('click', () => setHelp(false));
 window.addEventListener('keydown', event => { if (event.key === 'Escape' && !help.hidden) setHelp(false); });
+const match = createMatch();
+const panel = document.querySelector('#match-panel');
+const message = document.querySelector('#match-message');
+const roles = document.querySelector('#role-buttons');
+const controls = document.querySelector('#match-controls');
+const primary = document.querySelector('#match-primary');
+const resetButton = document.querySelector('#match-reset');
+const pauseButton = document.querySelector('#round-pause');
+const timerText = document.querySelector('#round-timer');
+const roleText = document.querySelector('#round-role');
+function displayMatch() {
+  const { phase, role, remaining } = match.snapshot();
+  panel.hidden = phase === 'playing';
+  roles.hidden = phase !== 'menu';
+  controls.hidden = phase === 'menu';
+  primary.hidden = phase === 'results';
+  primary.textContent = phase === 'paused' ? 'Resume' : 'Start round';
+  message.textContent = phase === 'menu' ? 'Choose a role for a three-minute exploration round.' :
+    phase === 'ready' ? 'Ready to explore! Gameplay objectives arrive in L2.P2.' :
+    phase === 'paused' ? 'Round paused.' : phase === 'results' ? 'Round finished. This prototype has no win scoring yet.' : '';
+  roleText.textContent = role === 'student' ? 'Student Organizer' : role === 'safety' ? 'Civic Safety Officer' : 'No role selected';
+  timerText.textContent = String(Math.floor(remaining / 60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
+  pauseButton.disabled = phase !== 'playing';
+}
+roles.querySelectorAll('[data-role]').forEach(button => button.addEventListener('click', () => { match.select(button.dataset.role); displayMatch(); }));
+primary.addEventListener('click', () => { if (match.snapshot().phase === 'paused') match.resume(); else match.start(); displayMatch(); });
+resetButton.addEventListener('click', () => { match.reset(); displayMatch(); });
+pauseButton.addEventListener('click', () => { match.pause(); displayMatch(); });
+displayMatch();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#dbe7ed');
 scene.fog = new THREE.Fog('#dbe7ed', 40, 100);
@@ -129,6 +159,9 @@ function animate() {
   requestAnimationFrame(animate);
   const elapsed = clock.getDelta();
   const dt = Math.min(elapsed, .05);
+  match.tick(dt);
+  if (match.snapshot().phase === 'results' && panel.hidden) displayMatch();
+  if (match.snapshot().phase === 'playing') timerText.textContent = String(Math.floor(match.snapshot().remaining / 60)).padStart(2,'0')+':'+String(match.snapshot().remaining%60).padStart(2,'0');
   frameSamples++;
   sampleSeconds += elapsed;
   if (sampleSeconds >= 1.0) {
@@ -146,7 +179,7 @@ function animate() {
   if (keys.has('a') || keys.has('arrowleft')) dx -= 1;
   if (keys.has('d') || keys.has('arrowright')) dx += 1;
   const length = Math.hypot(dx, dz);
-  if (length) {
+  if (length && match.snapshot().phase === 'playing') {
     dx = dx / length * dt * 6;
     dz = dz / length * dt * 6;
     if (!blocked(player.position.x + dx, player.position.z)) player.position.x += dx;
