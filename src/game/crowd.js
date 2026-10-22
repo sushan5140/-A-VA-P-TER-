@@ -9,6 +9,8 @@ export function createCrowdModel(waypoints, count=48, seed=41) {
     const node=Math.floor(random()*points.length);
     return {id,node,x:points[node].x,z:points[node].z,target:node,state:'wait',wait:.3+random()*2,speed:1+random()*.7};
   });
+  const initialAgents=agents.map(a=>({...a}));
+  const initialRng=rng;
   let closedEdge=null, slowdown=1;
   const edgeKey=(a,b)=>[Math.min(a,b),Math.max(a,b)].join('-');
   function chooseTarget(a) {
@@ -42,5 +44,10 @@ export function createCrowdModel(waypoints, count=48, seed=41) {
     slowdown=event?.type==='congestion'?.4:1;
     reroute();
   }
-  return {agents,update,reroute,setEvent,snapshot:()=>agents.map(({id,x,z,state})=>({id,x,z,state}))};
+  function reset() {
+    rng=initialRng;
+    closedEdge=null; slowdown=1;
+    agents.forEach((a,i)=>Object.assign(a,initialAgents[i]));
+  }
+  return {agents,update,reroute,setEvent,reset,snapshot:()=>agents.map(({id,x,z,state})=>({id,x,z,state}))};
 }
