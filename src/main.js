@@ -7,6 +7,7 @@ import { createObjectives } from './game/objectives.js';
 import { createCrowd } from './world/crowdVisual.js';
 import { createEventDirector } from './game/events.js';
 import { createScoring } from './game/scoring.js';
+import { buildResult } from './game/results.js';
 import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
 const mount = document.querySelector('#game');
@@ -34,6 +35,29 @@ let objectives = null;
 let scoring = null;
 const scoreText = document.querySelector('#score-total');
 const scoreDetails = document.querySelector('#score-details');
+const resultSummary=document.querySelector('#result-summary');
+const resultGrade=document.querySelector('#result-grade');
+const resultHeadline=document.querySelector('#result-headline');
+const resultTotals=document.querySelector('#result-totals');
+const resultBreakdown=document.querySelector('#result-breakdown');
+const rematchButton=document.querySelector('#match-rematch');
+let finalResult=null;
+function renderFinalResult() {
+  resultSummary.hidden=!finalResult;
+  if(!finalResult)return;
+  resultGrade.textContent='GRADE '+finalResult.grade;
+  resultHeadline.textContent=finalResult.headline;
+  resultTotals.textContent=finalResult.total+' / 120 points · '+finalResult.completed+' / '+finalResult.possible+' missions';
+  resultBreakdown.textContent='Missions '+finalResult.missions+' · Safe access '+finalResult.access+' · Events '+finalResult.events;
+}
+function resetRound() {
+  match.reset(); objectives=null; scoring=null; finalResult=null;
+  events.reset(); crowd.setEvent(null); renderEvent(null);
+  player.position.set(SPAWN.x,0,SPAWN.z);
+  visited.clear(); refreshHud(SPAWN.x,SPAWN.z);
+  renderFinalResult();
+  displayMatch();
+}
 function renderScore() { const st=scoring?.snapshot(); scoreText.textContent = st ? String(st.total) : '0'; scoreDetails.textContent=st ? `Missions ${st.missions} · Access ${st.access} · Events ${st.events}` : 'Earn points by completing missions and maintaining safe access'; }
 const missionCard = document.querySelector('#mission-card');
 const missionList = document.querySelector('#mission-list');
@@ -61,19 +85,28 @@ function displayMatch() {
   roles.hidden = phase !== 'menu';
   controls.hidden = phase === 'menu';
   primary.hidden = phase === 'results';
+  rematchButton.hidden = phase !== 'results';
+  renderFinalResult();
   primary.textContent = phase === 'paused' ? 'Resume' : 'Start round';
   renderMissions();
   renderScore();
   message.textContent = phase === 'menu' ? 'Choose a role for a three-minute exploration round.' :
     phase === 'ready' ? 'Visit the three mission locations marked on the map.' :
-    phase === 'paused' ? 'Round paused.' : phase === 'results' ? 'Round complete. Your score is shown below; winner comparison comes in L2.P6.' : '';
+    phase === 'paused' ? 'Round paused.' : phase === 'results' ? 'Round complete! Your personal performance summary is below.' : '';
   roleText.textContent = role === 'student' ? 'Student Organizer' : role === 'safety' ? 'Civic Safety Officer' : 'No role selected';
   timerText.textContent = String(Math.floor(remaining / 60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
   pauseButton.disabled = phase !== 'playing';
 }
 roles.querySelectorAll('[data-role]').forEach(button => button.addEventListener('click', () => { if(match.select(button.dataset.role)) { objectives=createObjectives(button.dataset.role); scoring=createScoring(button.dataset.role); } displayMatch(); }));
 primary.addEventListener('click', () => { if (match.snapshot().phase === 'paused') match.resume(); else match.start(); displayMatch(); });
-resetButton.addEventListener('click', () => { match.reset(); objectives=null; scoring=null; events.reset(); crowd.setEvent(null); renderEvent(null); displayMatch(); });
+resetButton.addEventListener('click', resetRound);
+rematchButton.addEventListener('click', () => {
+  const role=match.snapshot().role;
+  resetRound();
+  if(match.select(role)) { objectives=createObjectives(role); scoring=createScoring(role); }
+  match.start();
+  displayMatch();
+});
 pauseButton.addEventListener('click', () => { match.pause(); displayMatch(); });
 displayMatch();
 const scene = new THREE.Scene();
@@ -206,7 +239,10 @@ function animate() {
       renderScore();
     }
   }
-  if (match.snapshot().phase === 'results' && panel.hidden) displayMatch();
+  if (match.snapshot().phase === 'results' && !finalResult) {
+    finalResult=buildResult(scoring.snapshot(),objectives.snapshot());
+    displayMatch();
+  }
   if (match.snapshot().phase === 'playing') timerText.textContent = String(Math.floor(match.snapshot().remaining / 60)).padStart(2,'0')+':'+String(match.snapshot().remaining%60).padStart(2,'0');
   frameSamples++;
   sampleSeconds += elapsed;
