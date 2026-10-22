@@ -23,3 +23,8 @@ body{margin:0;overflow:hidden}#app,#game{width:100vw;height:100dvh;min-height:32
 .event-card{position:absolute;z-index:6;right:18px;bottom:36px;width:min(280px,calc(100vw - 36px));background:#17233af2;color:#fff;border:2px solid #f5c77d;border-radius:14px;padding:12px 15px;box-shadow:0 8px 28px #17233a50}.event-card[hidden]{display:none}.event-card strong{font:700 14px 'Space Grotesk',sans-serif;color:#f5c77d}.event-card p{font-size:12px;line-height:1.5;margin:7px 0 0}@media(max-width:650px){.event-card{right:10px;bottom:12px;width:150px;padding:9px}.event-card strong{font-size:11px}.event-card p{font-size:10px}}
 
 .score-card{position:absolute;left:18px;bottom:235px;z-index:5;background:#17233aee;border:1px solid #f9e8c955;border-radius:13px;padding:11px 15px;width:min(330px,calc(100vw - 36px));color:#fff}.score-card strong{display:flex;justify-content:space-between;align-items:center;font:700 14px 'Space Grotesk',sans-serif;color:#f5c77d}.score-card strong span{font-size:24px;color:white}.score-card p{font-size:10px;line-height:1.4;margin:6px 0 0}@media(max-width:650px){.score-card{left:10px;bottom:188px;width:min(260px,calc(100vw - 20px));padding:8px}.score-card strong span{font-size:18px}}
+
+.result-summary{border:1px solid #f5c77d77;background:#22354b;padding:14px;margin:14px 0;border-radius:13px;text-align:left}
+.result-summary[hidden]{display:none}
+.result-summary strong{font:700 27px 'Space Grotesk',sans-serif;color:#f5c77d}
+.result-summary p{margin:7px 0;font-size:12px;line-height:1.5;color:#f9e8c9}
