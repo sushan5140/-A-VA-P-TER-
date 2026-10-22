@@ -3,6 +3,11 @@ import './style.css';
 import { createWorld, SPAWN } from './world/paris.js';
 import { createPlayer } from './character/player.js';
 import { createMatch } from './game/match.js';
+import { createObjectives } from './game/objectives.js';
+import { createCrowd } from './world/crowdVisual.js';
+import { createEventDirector } from './game/events.js';
+import { createScoring } from './game/scoring.js';
+import { buildResult } from './game/results.js';
 import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
 const mount = document.querySelector('#game');
@@ -26,6 +31,46 @@ toggleHelp.addEventListener('click', () => setHelp(help.hidden));
 closeHelp.addEventListener('click', () => setHelp(false));
 window.addEventListener('keydown', event => { if (event.key === 'Escape' && !help.hidden) setHelp(false); });
 const match = createMatch();
+let objectives = null;
+let scoring = null;
+const scoreText = document.querySelector('#score-total');
+const scoreDetails = document.querySelector('#score-details');
+const resultSummary=document.querySelector('#result-summary');
+const resultGrade=document.querySelector('#result-grade');
+const resultHeadline=document.querySelector('#result-headline');
+const resultTotals=document.querySelector('#result-totals');
+const resultBreakdown=document.querySelector('#result-breakdown');
+const rematchButton=document.querySelector('#match-rematch');
+let finalResult=null;
+function renderFinalResult() {
+  resultSummary.hidden=!finalResult;
+  if(!finalResult)return;
+  resultGrade.textContent='GRADE '+finalResult.grade;
+  resultHeadline.textContent=finalResult.headline;
+  resultTotals.textContent=finalResult.total+' / 120 points · '+finalResult.completed+' / '+finalResult.possible+' missions';
+  resultBreakdown.textContent='Missions '+finalResult.missions+' · Safe access '+finalResult.access+' · Events '+finalResult.events;
+}
+function resetRound() {
+  match.reset(); objectives=null; scoring=null; finalResult=null;
+  events.reset(); crowd.reset(); renderEvent(null);
+  player.position.set(SPAWN.x,0,SPAWN.z);
+  keys.clear(); lastX=SPAWN.x; lastZ=SPAWN.z;
+  visited.clear(); refreshHud(SPAWN.x,SPAWN.z);
+  renderFinalResult();
+  displayMatch();
+}
+function renderScore() { const st=scoring?.snapshot(); scoreText.textContent = st ? String(st.total) : '0'; scoreDetails.textContent=st ? `Missions ${st.missions} · Access ${st.access} · Events ${st.events}` : 'Earn points by completing missions and maintaining safe access'; }
+const missionCard = document.querySelector('#mission-card');
+const missionList = document.querySelector('#mission-list');
+const missionProgress = document.querySelector('#mission-progress');
+function renderMissions() {
+  const state=objectives?.snapshot();
+  missionCard.hidden=!state;
+  if(!state)return;
+  missionList.replaceChildren(...state.tasks.map(task=>{const item=document.createElement('p');item.textContent=(task.done?'✓ ':'○ ')+task.label;item.className=task.done?'mission-done':'';return item;}));
+  missionProgress.textContent=state.completed+' / '+state.total+' completed';
+}
+
 const panel = document.querySelector('#match-panel');
 const message = document.querySelector('#match-message');
 const roles = document.querySelector('#role-buttons');
@@ -41,17 +86,28 @@ function displayMatch() {
   roles.hidden = phase !== 'menu';
   controls.hidden = phase === 'menu';
   primary.hidden = phase === 'results';
+  rematchButton.hidden = phase !== 'results';
+  renderFinalResult();
   primary.textContent = phase === 'paused' ? 'Resume' : 'Start round';
+  renderMissions();
+  renderScore();
   message.textContent = phase === 'menu' ? 'Choose a role for a three-minute exploration round.' :
-    phase === 'ready' ? 'Ready to explore! Gameplay objectives arrive in L2.P2.' :
-    phase === 'paused' ? 'Round paused.' : phase === 'results' ? 'Round finished. This prototype has no win scoring yet.' : '';
+    phase === 'ready' ? 'Visit the three mission locations marked on the map.' :
+    phase === 'paused' ? 'Round paused.' : phase === 'results' ? 'Round complete! Your personal performance summary is below.' : '';
   roleText.textContent = role === 'student' ? 'Student Organizer' : role === 'safety' ? 'Civic Safety Officer' : 'No role selected';
   timerText.textContent = String(Math.floor(remaining / 60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
   pauseButton.disabled = phase !== 'playing';
 }
-roles.querySelectorAll('[data-role]').forEach(button => button.addEventListener('click', () => { match.select(button.dataset.role); displayMatch(); }));
+roles.querySelectorAll('[data-role]').forEach(button => button.addEventListener('click', () => { if(match.select(button.dataset.role)) { objectives=createObjectives(button.dataset.role); scoring=createScoring(button.dataset.role); } displayMatch(); }));
 primary.addEventListener('click', () => { if (match.snapshot().phase === 'paused') match.resume(); else match.start(); displayMatch(); });
-resetButton.addEventListener('click', () => { match.reset(); displayMatch(); });
+resetButton.addEventListener('click', resetRound);
+rematchButton.addEventListener('click', () => {
+  const role=match.snapshot().role;
+  resetRound();
+  if(match.select(role)) { objectives=createObjectives(role); scoring=createScoring(role); }
+  match.start();
+  displayMatch();
+});
 pauseButton.addEventListener('click', () => { match.pause(); displayMatch(); });
 displayMatch();
 const scene = new THREE.Scene();
@@ -79,6 +135,17 @@ sun.shadow.camera.bottom = -28;
 scene.add(sun);
 
 const world = createWorld(scene);
+const crowd = createCrowd(scene,world.waypoints,48);
+const events = createEventDirector();
+const eventCard = document.querySelector('#event-card');
+const eventTitle = document.querySelector('#event-title');
+const eventDetail = document.querySelector('#event-detail');
+function renderEvent(event){
+  eventCard.hidden = !event;
+  eventTitle.textContent = event?.title || '';
+  eventDetail.textContent = event?.detail || '';
+}
+
 const visited = new Set();
 const mapPos = n => `${((n + 32) / 64 * 100).toFixed(2)}%`;
 for (const zone of world.zones) {
@@ -96,7 +163,7 @@ function refreshHud(x,z) {
     const d = Math.hypot(x-zone.x,z-zone.z);
     return !best || d < best.distance ? { zone, distance:d } : best;
   },null);
-  if (closest.distance < 2.5) visited.add(closest.zone.id);
+  if (closest.distance < 2.5) { visited.add(closest.zone.id); if(match.snapshot().phase==='playing' && objectives) { objectives.visit(closest.zone.id); if(scoring) scoring.mission(closest.zone.id); renderMissions(); renderScore(); } }
   zoneName.textContent = closest.zone.name;
   zoneDistance.textContent = closest.distance < 2.5 ? 'Area discovered!' : `${closest.distance.toFixed(1)} units away · Follow the colored ring`;
   progressText.textContent = `${visited.size} / ${world.zones.length} areas visited`;
@@ -160,7 +227,23 @@ function animate() {
   const elapsed = clock.getDelta();
   const dt = Math.min(elapsed, .05);
   match.tick(dt);
-  if (match.snapshot().phase === 'results' && panel.hidden) displayMatch();
+  if (match.snapshot().phase === 'playing') {
+    const outcome=events.update(dt);
+    if(outcome.changed){crowd.setEvent(outcome.event);renderEvent(outcome.event);}
+    crowd.update(dt);
+    if(scoring) {
+      const px=player.position.x,pz=player.position.z;
+      const accessZones = match.snapshot().role === 'student' ? ['plaza','west-route'] : ['services','east-route'];
+      const accessible = world.zones.some(z=>accessZones.includes(z.id)&&Math.hypot(px-z.x,pz-z.z)<3);
+      scoring.access(dt,accessible);
+      if (events.snapshot() && accessible) scoring.respond(events.snapshot().type,'acknowledge');
+      renderScore();
+    }
+  }
+  if (match.snapshot().phase === 'results' && !finalResult) {
+    finalResult=buildResult(scoring.snapshot(),objectives.snapshot());
+    displayMatch();
+  }
   if (match.snapshot().phase === 'playing') timerText.textContent = String(Math.floor(match.snapshot().remaining / 60)).padStart(2,'0')+':'+String(match.snapshot().remaining%60).padStart(2,'0');
   frameSamples++;
   sampleSeconds += elapsed;

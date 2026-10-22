@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {buildResult} from '../src/game/results.js';
+import {createScoring} from '../src/game/scoring.js';
+import {createObjectives} from '../src/game/objectives.js';
+test('empty round earns D without fictional victory',()=>{const s=createScoring('student');const m=createObjectives('student');const r=buildResult(s.snapshot(),m.snapshot());assert.equal(r.grade,'D');assert.equal(r.total,0);assert.ok(!('winner' in r));});
+test('completed missions appear in final breakdown',()=>{const s=createScoring('safety');const m=createObjectives('safety');for(const z of ['services','east-route','plaza']){s.mission(z);m.visit(z);}const r=buildResult(s.snapshot(),m.snapshot());assert.equal(r.missions,60);assert.equal(r.completed,3);assert.equal(r.grade,'B');});
+test('performance grades use inclusive boundaries',()=>{const base={role:'student',missions:0,access:0,events:0,completed:0};assert.equal(buildResult({...base,total:102},{completed:0,total:3}).grade,'S');assert.equal(buildResult({...base,total:78},{completed:0,total:3}).grade,'A');});
+test('oversize score clamps at maximum',()=>assert.equal(buildResult({role:'student',total:10000,missions:0,access:0,events:0},{completed:0,total:3}).total,120));
+test('missing inputs rejected',()=>assert.throws(()=>buildResult(null,null)));

@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createScoring } from '../src/game/scoring.js';
+test('role objectives award points once',()=>{const s=createScoring('student');s.mission('campus');s.mission('campus');assert.equal(s.snapshot().missions,20)});
+test('other role objectives do not award mission points',()=>{const s=createScoring('student');s.mission('services');assert.equal(s.snapshot().missions,0)});
+test('safe presence awards ten points every ten seconds with cap',()=>{const s=createScoring('safety');for(let i=0;i<12;i++)s.access(1,true);assert.equal(s.snapshot().access,10);for(let i=0;i<100;i++)s.access(1,true);assert.equal(s.snapshot().access,30)});
+test('unsafe or invalid durations are ignored',()=>{const s=createScoring('student');s.access(999,false);s.access(NaN,true);assert.equal(s.snapshot().access,0)});
+test('event response awards once per event type',()=>{const s=createScoring('student');s.respond('closure','acknowledge');s.respond('closure','acknowledge');assert.equal(s.snapshot().events,10)});
+test('reset clears score',()=>{const s=createScoring('student');s.mission('campus');s.reset();assert.equal(s.snapshot().total,0)});
+test('unknown role is rejected',()=>assert.throws(()=>createScoring('unknown')));
