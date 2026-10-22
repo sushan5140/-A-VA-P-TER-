@@ -5,6 +5,7 @@ import { createPlayer } from './character/player.js';
 import { createMatch } from './game/match.js';
 import { createObjectives } from './game/objectives.js';
 import { createCrowd } from './world/crowdVisual.js';
+import { createEventDirector } from './game/events.js';
 import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
 const mount = document.querySelector('#game');
@@ -66,7 +67,7 @@ function displayMatch() {
 }
 roles.querySelectorAll('[data-role]').forEach(button => button.addEventListener('click', () => { if(match.select(button.dataset.role)) objectives=createObjectives(button.dataset.role); displayMatch(); }));
 primary.addEventListener('click', () => { if (match.snapshot().phase === 'paused') match.resume(); else match.start(); displayMatch(); });
-resetButton.addEventListener('click', () => { match.reset(); objectives=null; displayMatch(); });
+resetButton.addEventListener('click', () => { match.reset(); objectives=null; events.reset(); crowd.setEvent(null); renderEvent(null); displayMatch(); });
 pauseButton.addEventListener('click', () => { match.pause(); displayMatch(); });
 displayMatch();
 const scene = new THREE.Scene();
@@ -95,6 +96,16 @@ scene.add(sun);
 
 const world = createWorld(scene);
 const crowd = createCrowd(scene,world.waypoints,48);
+const events = createEventDirector();
+const eventCard = document.querySelector('#event-card');
+const eventTitle = document.querySelector('#event-title');
+const eventDetail = document.querySelector('#event-detail');
+function renderEvent(event){
+  eventCard.hidden = !event;
+  eventTitle.textContent = event?.title || '';
+  eventDetail.textContent = event?.detail || '';
+}
+
 const visited = new Set();
 const mapPos = n => `${((n + 32) / 64 * 100).toFixed(2)}%`;
 for (const zone of world.zones) {
@@ -176,7 +187,11 @@ function animate() {
   const elapsed = clock.getDelta();
   const dt = Math.min(elapsed, .05);
   match.tick(dt);
-  if (match.snapshot().phase === 'playing') crowd.update(dt);
+  if (match.snapshot().phase === 'playing') {
+    const outcome=events.update(dt);
+    if(outcome.changed){crowd.setEvent(outcome.event);renderEvent(outcome.event);}
+    crowd.update(dt);
+  }
   if (match.snapshot().phase === 'results' && panel.hidden) displayMatch();
   if (match.snapshot().phase === 'playing') timerText.textContent = String(Math.floor(match.snapshot().remaining / 60)).padStart(2,'0')+':'+String(match.snapshot().remaining%60).padStart(2,'0');
   frameSamples++;

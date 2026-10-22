@@ -22,5 +22,5 @@ export function createCrowd(scene, waypoints, count=48) {
   mesh.instanceMatrix.needsUpdate=true;
  }
  update(0);
- return {update,reroute:model.reroute,snapshot:model.snapshot};
+ return {update,reroute:model.reroute,setEvent:model.setEvent,snapshot:model.snapshot};
 }
