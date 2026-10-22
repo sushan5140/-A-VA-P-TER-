@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import './style.css';
+import { createWorld, SPAWN } from './world/paris.js';
 
 const mount = document.querySelector('#game');
 const positionText = document.querySelector('#coords');
@@ -27,48 +28,7 @@ sun.shadow.camera.top = 28;
 sun.shadow.camera.bottom = -28;
 scene.add(sun);
 
-function block(w, h, d, color, x, y, z, cast = false) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: .94 }));
-  mesh.position.set(x, y, z);
-  mesh.receiveShadow = true;
-  mesh.castShadow = cast;
-  scene.add(mesh);
-  return mesh;
-}
-
-// Temporary world blockout: original geometry, not the final Paris level.
-block(80, .2, 80, '#a9c3a3', 0, -.18, 0);
-block(7, .04, 80, '#6d7886', 0, -.04, 0);
-block(80, .04, 6, '#6d7886', 0, -.035, 0);
-for (const side of [-1, 1]) {
-  block(.23, .14, 80, '#e8e1cf', side * 3.7, .02, 0);
-  block(80, .14, .23, '#e8e1cf', 0, .02, side * 3.2);
-}
-const facades = [
-  [-11, -11, 7, 5, 5, '#e7bca7'],
-  [11, -12, 8, 6, 5, '#efe3cb'],
-  [-12, 11, 6, 5, 7, '#b1c7d7'],
-  [12, 12, 7, 4, 8, '#ecd29e'],
-  [-12, 1, 5, 4, 5, '#d7b1aa'],
-  [12, 2, 6, 6, 5, '#c6c9bc'],
-];
-const obstacles = [];
-for (const [x, z, w, d, h, color] of facades) {
-  block(w, h, d, color, x, h / 2, z, true);
-  block(w + .45, .25, d + .45, '#6a7990', x, h + .14, z, true);
-  obstacles.push({ x, z, halfW: w / 2 + .48, halfD: d / 2 + .48 });
-}
-for (let z = -22; z <= 22; z += 7) {
-  for (const x of [-5.1, 5.1]) {
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.18, .23, 1.6, 6), new THREE.MeshStandardMaterial({ color: '#795846' }));
-    trunk.position.set(x, .8, z);
-    scene.add(trunk);
-    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.05, 0), new THREE.MeshStandardMaterial({ color: '#618e71', flatShading: true }));
-    crown.position.set(x, 2.15, z);
-    crown.castShadow = true;
-    scene.add(crown);
-  }
-}
+const world = createWorld(scene);
 
 const player = new THREE.Group();
 const coat = new THREE.Mesh(new THREE.CapsuleGeometry(.43, .9, 5, 8), new THREE.MeshStandardMaterial({ color: '#3764c9', roughness: .75 }));
@@ -82,7 +42,7 @@ player.add(head);
 const hair = new THREE.Mesh(new THREE.SphereGeometry(.44, 10, 6, 0, Math.PI * 2, 0, Math.PI * .5), new THREE.MeshStandardMaterial({ color: '#382d31' }));
 hair.position.y = 2.09;
 player.add(hair);
-player.position.set(0, 0, 0);
+player.position.set(SPAWN.x, 0, SPAWN.z);
 scene.add(player);
 
 const keys = new Set();
@@ -93,10 +53,7 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 window.addEventListener('blur', () => keys.clear());
 
-function blocked(x, z) {
-  if (Math.abs(x) > 28 || Math.abs(z) > 28) return true;
-  return obstacles.some(o => Math.abs(x - o.x) < o.halfW && Math.abs(z - o.z) < o.halfD);
-}
+function blocked(x, z) { return world.isBlocked(x, z); }
 function resize() {
   const width = mount.clientWidth || innerWidth;
   const height = mount.clientHeight || innerHeight;
