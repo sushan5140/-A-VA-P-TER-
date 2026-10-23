@@ -5,7 +5,7 @@ export const ROOM_MAX_PLAYERS = 8;
 export const CLIENT_TICK_HZ = 10;
 export const ROLES = Object.freeze(['student','safety']);
 export function validRoomCode(code) {
- return typeof code==='string' && /^[A-Z2-9]{6}$/.test(code);
+ return typeof code==='string' && /^[A-HJ-NP-Z2-9]{6}$/.test(code);
 }
 export function validPlayerIntent(packet) {
  if(!packet||typeof packet!=='object'||Array.isArray(packet))return false;
