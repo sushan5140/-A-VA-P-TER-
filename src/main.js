@@ -55,7 +55,7 @@ function resetRound() {
   match.reset(); objectives=null; scoring=null; finalResult=null;
   events.reset(); crowd.reset(); renderEvent(null);
   player.position.set(SPAWN.x,0,SPAWN.z);
-  keys.clear(); touch.clear(); lastX=SPAWN.x; lastZ=SPAWN.z;
+  keys.clear(); touch.clear(); mouseHeld=false; mousePointer=null; lastX=SPAWN.x; lastZ=SPAWN.z;
   visited.clear(); refreshHud(SPAWN.x,SPAWN.z);
   renderFinalResult();
   displayMatch();
@@ -185,6 +185,34 @@ const cameraFocus = new THREE.Vector3(SPAWN.x, 0, SPAWN.z);
 const cameraOffset = new THREE.Vector3(12, 20, 16);
 const cameraLook = new THREE.Vector3();
 
+// Desktop: hold left mouse button and steer toward the cursor on the ground.
+const mouseRay = new THREE.Raycaster();
+const mouseNdc = new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0,1,0),0);
+const mouseTarget = new THREE.Vector3();
+let mouseHeld = false;
+let mousePointer = null;
+function aimMouse(e) {
+  const rect=renderer.domElement.getBoundingClientRect();
+  mouseNdc.set(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
+  mouseRay.setFromCamera(mouseNdc,camera);
+  mouseRay.ray.intersectPlane(groundPlane,mouseTarget);
+}
+renderer.domElement.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='touch'||e.button!==0||match.snapshot().phase!=='playing')return;
+  e.preventDefault(); mouseHeld=true; mousePointer=e.pointerId;
+  renderer.domElement.setPointerCapture(e.pointerId);aimMouse(e);
+});
+renderer.domElement.addEventListener('pointermove',e=>{
+  if(mouseHeld && e.pointerId===mousePointer)aimMouse(e);
+});
+function releaseMouse(e){
+  if(e.pointerId===mousePointer){mouseHeld=false;mousePointer=null;}
+}
+renderer.domElement.addEventListener('pointerup',releaseMouse);
+renderer.domElement.addEventListener('pointercancel',releaseMouse);
+renderer.domElement.addEventListener('lostpointercapture',releaseMouse);
+window.addEventListener('blur',()=>{mouseHeld=false;mousePointer=null;});
 const keys = new Set();
 const touch = createTouchMovement(document.querySelector('#touch-pad'));
 window.addEventListener('keydown', e => {
@@ -266,6 +294,12 @@ function animate() {
   const touchAxes = touch.getAxes();
   dx += touchAxes.x;
   dz += touchAxes.z;
+  // Keyboard/touch remain optional; mouse steers only while held.
+  if(mouseHeld && match.snapshot().phase==='playing'){
+    const mx=mouseTarget.x-player.position.x,mz=mouseTarget.z-player.position.z;
+    const distance=Math.hypot(mx,mz);
+    if(distance>.5){dx+=mx/distance;dz+=mz/distance;}
+  }
   const length = Math.hypot(dx, dz);
   if (length && match.snapshot().phase === 'playing') {
     dx = dx / length * dt * 6;
