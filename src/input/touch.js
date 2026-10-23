@@ -1,22 +1,28 @@
-// Touch D-pad exposes normalized axes while preserving keyboard input.
-// Pointer capture avoids stuck movement when a finger slides off a button.
-export function createTouchMovement(root) {
- const active=new Map();
- const vectors={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
- const buttons=[...root.querySelectorAll('[data-direction]')];
- function stop(e){active.delete(e.pointerId);root.querySelectorAll('[data-direction]').forEach(b=>{if(b.hasPointerCapture?.(e.pointerId))b.releasePointerCapture(e.pointerId);});}
- for(const button of buttons){
-  const direction=button.dataset.direction;
-  button.addEventListener('pointerdown',e=>{if(!vectors[direction])return;e.preventDefault();button.setPointerCapture(e.pointerId);active.set(e.pointerId,direction);});
-  button.addEventListener('pointerup',stop);
-  button.addEventListener('pointercancel',stop);
-  button.addEventListener('lostpointercapture',e=>active.delete(e.pointerId));
+// Analog movement in normalized world axes; independent of graphics rendering.
+export function joystickAxes(dx,dy,radius=52,deadZone=.10){
+ const length=Math.hypot(dx,dy);
+ if(!Number.isFinite(length)||length<radius*deadZone)return {x:0,z:0};
+ const strength=Math.min(1,length/radius);
+ return {x:dx/length*strength,z:dy/length*strength};
+}
+export function createTouchMovement(root){
+ const knob=root.querySelector('.touch-knob');
+ let pointer=null,axes={x:0,z:0};
+ function update(e){
+  const rect=root.getBoundingClientRect();
+  const dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);
+  axes=joystickAxes(dx,dy,rect.width*.36);
+  knob.style.transform=`translate(-50%, -50%) translate(${axes.x*rect.width*.36}px, ${axes.z*rect.width*.36}px)`;
  }
- const clear=()=>active.clear();
+ function clear(){
+  pointer=null;axes={x:0,z:0};knob.style.transform='translate(-50%, -50%)';
+ }
+ root.addEventListener('pointerdown',e=>{if(pointer!==null)return;e.preventDefault();pointer=e.pointerId;root.setPointerCapture(e.pointerId);update(e);});
+ root.addEventListener('pointermove',e=>{if(e.pointerId===pointer){e.preventDefault();update(e);}});
+ root.addEventListener('pointerup',e=>{if(e.pointerId===pointer)clear();});
+ root.addEventListener('pointercancel',e=>{if(e.pointerId===pointer)clear();});
+ root.addEventListener('lostpointercapture',e=>{if(e.pointerId===pointer)clear();});
  window.addEventListener('blur',clear);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)clear();});
- return {
-  getAxes(){let x=0,z=0;for(const direction of active.values()){x+=vectors[direction][0];z+=vectors[direction][1];}return {x:Math.sign(x),z:Math.sign(z)};},
-  clear
- };
+ return {getAxes:()=>({...axes}),clear};
 }
