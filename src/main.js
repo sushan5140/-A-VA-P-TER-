@@ -10,8 +10,18 @@ import { createCrowd } from './world/crowdVisual.js';
 import { createEventDirector } from './game/events.js';
 import { createScoring } from './game/scoring.js';
 import { buildResult } from './game/results.js';
+import { createGameAudio } from './audio/gameAudio.js';
 import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
+const audio=createGameAudio();
+const soundButton=document.querySelector('#audio-toggle');
+const announcement=document.querySelector('#game-announcement');
+soundButton.addEventListener('click',()=>{
+ const on=audio.setEnabled(!audio.isEnabled());
+ soundButton.textContent=on?'Sound: On':'Sound: Off';
+ soundButton.setAttribute('aria-pressed',String(on));
+ if(on)audio.play('tap');
+});
 const mount = document.querySelector('#game');
 const positionText = document.querySelector('#coords');
 const errorText = document.querySelector('#error');
