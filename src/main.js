@@ -10,8 +10,18 @@ import { createCrowd } from './world/crowdVisual.js';
 import { createEventDirector } from './game/events.js';
 import { createScoring } from './game/scoring.js';
 import { buildResult } from './game/results.js';
+import { createGameAudio } from './audio/gameAudio.js';
 import { qualitySettings, recommendQuality, sampleFps } from './performance.js';
 
+const audio=createGameAudio();
+const soundButton=document.querySelector('#audio-toggle');
+const announcement=document.querySelector('#game-announcement');
+soundButton.addEventListener('click',()=>{
+ const on=audio.setEnabled(!audio.isEnabled());
+ soundButton.textContent=on?'Sound: On':'Sound: Off';
+ soundButton.setAttribute('aria-pressed',String(on));
+ if(on)audio.play('tap');
+});
 const mount = document.querySelector('#game');
 const positionText = document.querySelector('#coords');
 const errorText = document.querySelector('#error');
@@ -48,6 +58,8 @@ function renderFinalResult() {
   resultSummary.hidden=!finalResult;
   if(!finalResult)return;
   resultGrade.textContent='GRADE '+finalResult.grade;
+  announcement.textContent='Round complete. Grade '+finalResult.grade+'.';
+  audio.play('finish');
   resultHeadline.textContent=finalResult.headline;
   resultTotals.textContent=finalResult.total+' / 120 points · '+finalResult.completed+' / '+finalResult.possible+' missions';
   resultBreakdown.textContent='Missions '+finalResult.missions+' · Safe access '+finalResult.access+' · Events '+finalResult.events;
@@ -165,7 +177,7 @@ function refreshHud(x,z) {
     const d = Math.hypot(x-zone.x,z-zone.z);
     return !best || d < best.distance ? { zone, distance:d } : best;
   },null);
-  if (closest.distance < 2.5) { visited.add(closest.zone.id); if(match.snapshot().phase==='playing' && objectives) { objectives.visit(closest.zone.id); if(scoring) scoring.mission(closest.zone.id); renderMissions(); renderScore(); } }
+  if (closest.distance < 2.5) { visited.add(closest.zone.id); if(match.snapshot().phase==='playing' && objectives) { const countBefore=objectives.snapshot().completed; objectives.visit(closest.zone.id); if(scoring) scoring.mission(closest.zone.id); if(objectives.snapshot().completed>countBefore){audio.play('mission');announcement.textContent='Mission complete at '+closest.zone.name;} renderMissions(); renderScore(); } }
   zoneName.textContent = closest.zone.name;
   zoneDistance.textContent = closest.distance < 2.5 ? 'Area discovered!' : `${closest.distance.toFixed(1)} units away · Follow the colored ring`;
   progressText.textContent = `${visited.size} / ${world.zones.length} areas visited`;
@@ -261,7 +273,7 @@ function animate() {
   match.tick(dt);
   if (match.snapshot().phase === 'playing') {
     const outcome=events.update(dt);
-    if(outcome.changed){crowd.setEvent(outcome.event);renderEvent(outcome.event);}
+    if(outcome.changed){crowd.setEvent(outcome.event);renderEvent(outcome.event);if(outcome.event){audio.play('event');announcement.textContent=outcome.event.title;}}
     crowd.update(dt);
     if(scoring) {
       const px=player.position.x,pz=player.position.z;
