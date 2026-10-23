@@ -3,6 +3,7 @@ import './style.css';
 import { createWorld, SPAWN } from './world/paris.js';
 import { createPlayer } from './character/player.js';
 import { createMatch } from './game/match.js';
+import { stepMotion, cursorDirection } from './game/movement.js';
 import { createTouchMovement } from './input/touch.js';
 import { createObjectives } from './game/objectives.js';
 import { createCrowd } from './world/crowdVisual.js';
@@ -55,7 +56,7 @@ function resetRound() {
   match.reset(); objectives=null; scoring=null; finalResult=null;
   events.reset(); crowd.reset(); renderEvent(null);
   player.position.set(SPAWN.x,0,SPAWN.z);
-  keys.clear(); touch.clear(); mouseHeld=false; mousePointer=null; lastX=SPAWN.x; lastZ=SPAWN.z;
+  keys.clear(); touch.clear(); mouseHeld=false; mousePointer=null; velocity={x:0,z:0}; lastX=SPAWN.x; lastZ=SPAWN.z;
   visited.clear(); refreshHud(SPAWN.x,SPAWN.z);
   renderFinalResult();
   displayMatch();
@@ -241,6 +242,7 @@ resize();
 const clock = new THREE.Clock();
 let last = 0;
 let lastX = player.position.x, lastZ = player.position.z;
+let velocity={x:0,z:0};
 let frameSamples = 0, sampleSeconds = 0, underTargetSamples = 0;
 const perf = document.querySelector('#performance-status');
 function applyQuality(mode) {
@@ -294,19 +296,21 @@ function animate() {
   const touchAxes = touch.getAxes();
   dx += touchAxes.x;
   dz += touchAxes.z;
-  // Keyboard/touch remain optional; mouse steers only while held.
+  // Keyboard and touch still work; mouse takes over when held.
   if(mouseHeld && match.snapshot().phase==='playing'){
-    const mx=mouseTarget.x-player.position.x,mz=mouseTarget.z-player.position.z;
-    const distance=Math.hypot(mx,mz);
-    if(distance>.5){dx+=mx/distance;dz+=mz/distance;}
+    const aim=cursorDirection(player.position,mouseTarget);
+    dx=aim.x;dz=aim.z;
   }
-  const length = Math.hypot(dx, dz);
-  if (length && match.snapshot().phase === 'playing') {
-    dx = dx / length * dt * 6;
-    dz = dz / length * dt * 6;
-    if (!blocked(player.position.x + dx, player.position.z)) player.position.x += dx;
-    if (!blocked(player.position.x, player.position.z + dz)) player.position.z += dz;
-    // Smooth character facing is applied to the visual rig.
+  if(match.snapshot().phase==='playing'){
+    velocity=stepMotion(velocity,{x:dx,z:dz},dt);
+    const nextX=player.position.x+velocity.x*dt;
+    const nextZ=player.position.z+velocity.z*dt;
+    if(!blocked(nextX,player.position.z))player.position.x=nextX;
+    else velocity.x=0;
+    if(!blocked(player.position.x,nextZ))player.position.z=nextZ;
+    else velocity.z=0;
+  } else {
+    velocity={x:0,z:0};
   }
   const moved = Math.hypot(player.position.x - lastX, player.position.z - lastZ) > .0001;
   const heading = moved ? Math.atan2(player.position.x - lastX, player.position.z - lastZ) : 0;
