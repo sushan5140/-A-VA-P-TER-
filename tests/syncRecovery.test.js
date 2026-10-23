@@ -8,7 +8,7 @@ test('server moves based on validated intent not claimed position',()=>{
  const s=createRoomSimulation(players);
  assert.equal(s.input(players[0].id,packet(0,1,0)),true);
  s.step(.1);
- assert.equal(s.snapshot().players[0].x,.6);
+ assert.ok(Math.abs(s.snapshot().players[0].x-.6)<1e-9);
  assert.equal(s.input(players[0].id,{...packet(1,1,0),position:999}),true);
  assert.ok(s.snapshot().players[0].x<1);
 });
@@ -25,7 +25,7 @@ test('disconnect halts movement and reconnect requires new intent',()=>{
  assert.equal(s.reconnect(players[0].id),true);
  s.step(.1);assert.equal(s.snapshot().players[0].x,0);
  assert.equal(s.input(players[0].id,packet(1,0,1)),true);
- s.step(.1);assert.equal(s.snapshot().players[0].z,.6);
+ s.step(.1);assert.ok(Math.abs(s.snapshot().players[0].z-.6)<1e-9);
 });
 test('authoritative positions are bounded',()=>{
  const s=createRoomSimulation(players);s.input(players[0].id,packet(0,1,0));
