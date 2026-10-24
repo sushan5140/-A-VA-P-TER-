@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import './style.css';
 import { createWorld, SPAWN } from './world/paris.js';
+import { applyIndieLook,decorateLandmarks } from './world/indieLook.js';
 import { createPlayer } from './character/player.js';
 import { createMatch } from './game/match.js';
 import { stepMotion, cursorDirection } from './game/movement.js';
@@ -149,6 +150,8 @@ sun.shadow.camera.bottom = -28;
 scene.add(sun);
 
 const world = createWorld(scene);
+const landmarkAccents=decorateLandmarks(scene,world.zones);
+applyIndieLook(renderer,scene,qualityMode);
 const crowd = createCrowd(scene,world.waypoints,48);
 const events = createEventDirector();
 const eventCard = document.querySelector('#event-card');
@@ -265,6 +268,7 @@ function applyQuality(mode) {
   renderer.shadowMap.enabled = settings.shadows;
   renderer.setPixelRatio(settings.pixelRatio);
   renderer.setSize(mount.clientWidth || innerWidth, mount.clientHeight || innerHeight, false);
+  applyIndieLook(renderer,scene,mode);
   perf.textContent = mode === 'low' ? 'LOW GRAPHICS' : 'AUTO GRAPHICS';
 }
 document.querySelector('#graphics-toggle').addEventListener('click', () => applyQuality(qualityMode === 'low' ? 'auto' : 'low'));
@@ -345,6 +349,7 @@ function animate() {
     refreshHud(player.position.x,player.position.z);
     last = clock.elapsedTime;
   }
+  landmarkAccents.update(clock.elapsedTime);
   renderer.render(scene, camera);
 }
 renderer.domElement.addEventListener('webglcontextlost', e => {
