@@ -78,5 +78,5 @@ export function createWorld(scene) {
     if(Math.abs(x)>bounds-radius||Math.abs(z)>bounds-radius)return true;
     return obstacles.some(o=>Math.abs(x-o.x)<o.halfW+radius-.4&&Math.abs(z-o.z)<o.halfD+radius-.4);
   }
-  return {isBlocked,zones:ZONES,waypoints:WAYPOINTS,spawn:SPAWN,bounds};
+  return {isBlocked,zones:ZONES,waypoints:WAYPOINTS,spawn:SPAWN,bounds,physicsObstacles:obstacles.map(o=>({...o}))};
 }

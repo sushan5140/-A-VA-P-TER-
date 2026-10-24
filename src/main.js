@@ -68,7 +68,7 @@ function resetRound() {
   match.reset(); objectives=null; scoring=null; finalResult=null;
   events.reset(); crowd.reset(); renderEvent(null);
   player.position.set(SPAWN.x,0,SPAWN.z);
-  keys.clear(); touch.clear(); mouseHeld=false; mousePointer=null; velocity={x:0,z:0}; lastX=SPAWN.x; lastZ=SPAWN.z;
+  keys.clear(); touch.clear(); mouseHeld=false; mousePointer=null; velocity={x:0,z:0}; physicalController?.reset(SPAWN.x,SPAWN.z); lastX=SPAWN.x; lastZ=SPAWN.z;
   visited.clear(); refreshHud(SPAWN.x,SPAWN.z);
   renderFinalResult();
   displayMatch();
@@ -190,6 +190,8 @@ refreshHud(SPAWN.x,SPAWN.z);
 
 const character = createPlayer();
 const player = character.root;
+let physicalController = null;
+import('./physics/rapierController.js').then(module=>module.createPhysicalController(world.physicsObstacles,SPAWN)).then(controller=>{physicalController=controller;}).catch(error=>{console.warn('Rapier unavailable; retaining classic collision',error);});
 player.position.set(SPAWN.x, 0, SPAWN.z);
 scene.add(player);
 
@@ -315,12 +317,17 @@ function animate() {
   }
   if(match.snapshot().phase==='playing'){
     velocity=stepMotion(velocity,{x:dx,z:dz},dt);
-    const nextX=player.position.x+velocity.x*dt;
-    const nextZ=player.position.z+velocity.z*dt;
-    if(!blocked(nextX,player.position.z))player.position.x=nextX;
-    else velocity.x=0;
-    if(!blocked(player.position.x,nextZ))player.position.z=nextZ;
-    else velocity.z=0;
+    if(physicalController){
+      const pos=physicalController.move(velocity.x*dt,velocity.z*dt);
+      player.position.x=pos.x;player.position.z=pos.z;
+    } else {
+      const nextX=player.position.x+velocity.x*dt;
+      const nextZ=player.position.z+velocity.z*dt;
+      if(!blocked(nextX,player.position.z))player.position.x=nextX;
+      else velocity.x=0;
+      if(!blocked(player.position.x,nextZ))player.position.z=nextZ;
+      else velocity.z=0;
+    }
   } else {
     velocity={x:0,z:0};
   }
