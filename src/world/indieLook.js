@@ -7,7 +7,7 @@ export function applyIndieLook(renderer,scene,quality='auto'){
  renderer.toneMappingExposure=low?1.05:1.18;
  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  scene.background=new THREE.Color('#d6e5e3');
- scene.fog=new THREE.FogExp2('#d6e5e3',low?.009:.006);
+ scene.fog=new THREE.FogExp2('#d6e5e3',low ? 0.009 : 0.006);
 }
 export function decorateLandmarks(scene,zones){
  const palette=['#f6cf83','#f08e80','#85c5c2','#9ebbe3','#b0a1d9'];
