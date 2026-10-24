@@ -33,6 +33,8 @@ export function createPlayer() {
   }
   let phase = 0;
   let speed = 0;
+  let previousAngle = 0;
+  let lean = 0;
   function update(dt, moving, angle) {
     const target = moving ? 1 : 0;
     speed += (target - speed) * (1 - Math.exp(-dt * 10));
@@ -43,7 +45,12 @@ export function createPlayer() {
       arm.rotation.x = -stride * side * .7;
     }
     torso.position.y = Math.abs(Math.sin(phase)) * .07 * speed;
-    torso.rotation.z = Math.sin(phase) * .04 * speed;
+    // Lean while changing direction, returning to upright at rest.
+    const turn = Math.atan2(Math.sin(angle-previousAngle),Math.cos(angle-previousAngle));
+    const targetLean = moving ? Math.max(-.13, Math.min(.13, -turn*1.4)) : 0;
+    lean += (targetLean-lean)*(1-Math.exp(-dt*9));
+    torso.rotation.z = Math.sin(phase) * .04 * speed + lean;
+    if(moving)previousAngle=angle;
     const delta = Math.atan2(Math.sin(angle - facing.rotation.y), Math.cos(angle - facing.rotation.y));
     if (moving) facing.rotation.y += delta * (1 - Math.exp(-dt * 15));
   }
